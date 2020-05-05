@@ -9,7 +9,8 @@ extern VALUE mTinyTds, cTinyTdsClient, cTinyTdsError;
 VALUE cKernel, cDate;
 VALUE opt_decimal_zero, opt_float_zero, opt_one, opt_zero, opt_four, opt_19hdr, opt_onek, opt_tenk, opt_onemil, opt_onebil;
 static ID intern_new, intern_utc, intern_local, intern_localtime, intern_merge,
-          intern_civil, intern_new_offset, intern_plus, intern_divide, intern_bigd;
+          intern_civil, intern_new_offset, intern_plus, intern_divide, intern_bigd,
+          intern_to_i;
 static ID sym_symbolize_keys, sym_as, sym_array, sym_cache_rows, sym_first, sym_timezone, sym_local, sym_utc, sym_empty_sets;
 
 
@@ -228,7 +229,12 @@ static VALUE rb_tinytds_result_fetch_row(VALUE self, ID timezone, int symbolize_
           int data_slength = (int)data_info->precision + (int)data_info->scale + 1;
           char converted_decimal[data_slength];
           dbconvert(rwrap->client, coltype, data, data_len, SYBVARCHAR, (BYTE *)converted_decimal, -1);
-          val = rb_funcall(cKernel, intern_bigd, 1, rb_str_new2((char *)converted_decimal));
+
+          if (data_info->scale == 0) {
+            val = rb_funcall(rb_str_new2((char *)converted_decimal), intern_to_i, 0);
+          } else {
+            val = rb_funcall(cKernel, intern_bigd, 1, rb_str_new2((char *)converted_decimal));
+          }
           break;
         }
         case SYBFLT8: {
@@ -589,6 +595,7 @@ void init_tinytds_result() {
   intern_plus = rb_intern("+");
   intern_divide = rb_intern("/");
   intern_bigd = rb_intern("BigDecimal");
+  intern_to_i = rb_intern("to_i");
   /* Symbol Helpers */
   sym_symbolize_keys = ID2SYM(rb_intern("symbolize_keys"));
   sym_as = ID2SYM(rb_intern("as"));
